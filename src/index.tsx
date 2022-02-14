@@ -59,7 +59,7 @@ interface SplitProps {
   draggerClassName?: string;
   children?: React.ReactNode;
   onResizeStarted?: (pairIdx: number) => void;
-  onResizeFinished?: (pairIdx: number, newSizes: number[]) => void;
+  onResizeFinished?: (pairIdx: number, newSizesPct: number[], newSizesPx: number[]) => void;
   classes?: string[];
 }
 
@@ -122,7 +122,9 @@ function Split({
     });
 
     // The callback receives an index of the resized pair and new sizes of all child elements.
-    const allSizes: number[] = [];
+    const allSizesPct: number[] = [];
+    const allSizesPx: number[] = [];
+
     for (let idx = 0; idx < state.pairs.length; idx++) {
       const pair = state.pairs[idx];
       const parentSize = getInnerSize(direction, pair.parent);
@@ -134,19 +136,21 @@ function Split({
 
       const aSize = pair.a.getBoundingClientRect()[direction === SplitDirection.Horizontal ? 'width' : 'height'];
       const { aGutterSize, bGutterSize } = getGutterSizes(pair.gutterSize, isFirst, isLast);
-      const aSizePct = ((aSize + aGutterSize) / parentSize) * 100;
-      allSizes.push(aSizePct);
+      const aSizePct = ((aSize + aGutterSize) / parentSize) * 100;    
+      allSizesPct.push(aSizePct);
+      allSizesPx.push(aSize);
 
       if (isLast) {
         const bSize = pair.b.getBoundingClientRect()[direction === SplitDirection.Horizontal ? 'width' : 'height'];
         const bSizePct = ((bSize + bGutterSize) / parentSize) * 100;
-        allSizes.push(bSizePct);
+        allSizesPct.push(bSizePct);
+        allSizesPx.push(bSize);
       }
     }
 
     if (state.draggingIdx === undefined) throw new Error(`Could not reset cursor and user-select because 'state.draggingIdx' is undefined`);
     const pair = state.pairs[state.draggingIdx];
-    onResizeFinished?.(pair.idx, allSizes);
+    onResizeFinished?.(pair.idx, allSizesPct, allSizesPx);
 
     // Disable selection.
     pair.a.style.userSelect = '';
