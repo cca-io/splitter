@@ -24,6 +24,7 @@ export enum GutterTheme {
 }
 
 const DefaultMinSize = 16;
+const DefaultMaxSize = Number.MAX_VALUE;
 
 function getMousePosition(dir: SplitDirection, e: MouseEvent) {
   if (dir === SplitDirection.Horizontal) return e.clientX;
@@ -53,6 +54,8 @@ interface SplitProps {
   direction?: SplitDirection;
   minWidths?: number[]; // In pixels.
   minHeights?: number[]; // In pixels.
+  maxWidths?: number[]; // In pixels.
+  maxHeights?: number[]; // In pixels.
   initialSizes?: number[]; // In percentage.
   gutterTheme?: GutterTheme;
   gutterClassName?: string;
@@ -67,6 +70,8 @@ function Split({
   direction = SplitDirection.Horizontal,
   minWidths = [],
   minHeights = [],
+  maxWidths = [],
+  maxHeights = [],
   initialSizes,
   gutterTheme = GutterTheme.Dark,
   gutterClassName,
@@ -261,7 +266,7 @@ function Split({
     }
   }, [state.draggingIdx, state.pairs, direction]);
 
-  const drag = React.useCallback((e: MouseEvent, direction: SplitDirection, minSizes: number[]) => {
+  const drag = React.useCallback((e: MouseEvent, direction: SplitDirection, minSizes: number[], maxSizes: number[]) => {
     if (!state.isDragging) return
     if (state.draggingIdx === undefined) throw new Error(`Cannot drag - 'draggingIdx' is undefined`);
 
@@ -277,11 +282,19 @@ function Split({
 
     let aMinSize = DefaultMinSize;
     let bMinSize = DefaultMinSize;
+    let aMaxSize = DefaultMaxSize;
+    let bMaxSize = DefaultMaxSize;
     if (minSizes.length > state.draggingIdx) {
       aMinSize = minSizes[state.draggingIdx];
     }
     if (minSizes.length >= state.draggingIdx + 1) {
       bMinSize = minSizes[state.draggingIdx + 1];
+    }
+    if (maxSizes.length > state.draggingIdx) {
+      aMaxSize = maxSizes[state.draggingIdx];
+    }
+    if (maxSizes.length >= state.draggingIdx + 1) {
+      bMaxSize = maxSizes[state.draggingIdx + 1];
     }
 
     // TODO: We should check whether the parent is big enough
@@ -292,6 +305,14 @@ function Split({
 
     if (offset >= pair.size - (pair.gutterSize + bMinSize)) {
       offset = pair.size - (pair.gutterSize + bMinSize);
+    }
+    
+    if (offset > pair.gutterSize + aMaxSize) {
+      offset = pair.gutterSize + aMaxSize;
+    }
+
+    if (offset <= pair.size - (pair.gutterSize + bMaxSize)) {
+      offset = pair.size - (pair.gutterSize + bMaxSize);
     }
 
     adjustSize(direction, offset);
@@ -313,8 +334,8 @@ function Split({
 
   useEventListener('mousemove', (e: MouseEvent) => {
     if (!state.isDragging) return;
-    drag(e, direction, direction === SplitDirection.Horizontal ? minWidths : minHeights);
-  }, [direction, state.isDragging, drag, minWidths, minHeights]);
+    drag(e, direction, direction === SplitDirection.Horizontal ? minWidths : minHeights, direction === SplitDirection.Horizontal ? maxWidths : maxHeights);
+  }, [direction, state.isDragging, drag, minWidths, minHeights, maxWidths, maxHeights]);
 
   // This makes sure that Splitter properly re-renders if parent's size changes dynamically.
   useEffect(function watchParentSize() {
